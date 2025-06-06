@@ -1,4 +1,4 @@
-﻿namespace VDFaceTracking
+﻿namespace WVFaceTracking
 {
     public static class FBExpression
     {

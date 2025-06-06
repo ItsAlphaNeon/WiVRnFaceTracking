@@ -1,4 +1,4 @@
-﻿namespace VirtualDesktop.FaceTracking
+﻿namespace WiVRn.FaceTracking
 {
     public enum Expressions
     {

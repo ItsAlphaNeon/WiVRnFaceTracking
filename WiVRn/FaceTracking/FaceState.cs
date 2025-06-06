@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace VirtualDesktop.FaceTracking
+namespace WiVRn.FaceTracking
 {
     public struct FaceState
     {

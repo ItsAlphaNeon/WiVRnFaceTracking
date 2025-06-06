@@ -4,9 +4,9 @@ using ResoniteModLoader;
 using System;
 using System.Threading;
 
-namespace VDFaceTracking
+namespace WVFaceTracking
 {
-    public class VDFaceTracking : ResoniteMod
+    public class WVFaceTracking : ResoniteMod
     {
         [AutoRegisterConfigKey]
         private static readonly ModConfigurationKey<float> EyeOpennessExponent =
