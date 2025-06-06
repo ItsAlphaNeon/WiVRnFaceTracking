@@ -12,16 +12,16 @@ namespace WVFaceTracking
     {
         private const string BodyStateMapName = "WiVRn.BodyState";
         private const string BodyStateEventName = "WiVRn.BodyStateEvent";
-        private MemoryMappedFile _mappedFile;
-        private MemoryMappedViewAccessor _mappedView;
+        private MemoryMappedFile? _mappedFile;
+        private MemoryMappedViewAccessor? _mappedView;
         private unsafe FaceState* _faceState;
-        private EventWaitHandle _faceStateEvent;
+        private EventWaitHandle? _faceStateEvent;
 
-        private CancellationTokenSource cancellationTokenSource;
+        private CancellationTokenSource? cancellationTokenSource;
 
         private bool? _isTracking;
 
-        private Thread thread;
+        private Thread? thread;
 
         private const int NATURAL_EXPRESSIONS_COUNT = FBExpression.Max;
         private const float SRANIPAL_NORMALIZER = 0.75f;
@@ -30,10 +30,10 @@ namespace WVFaceTracking
         private double pitch_L, yaw_L, pitch_R, yaw_R; // Eye rotations
 
         #region RESONITE VARIABLES
-        private InputInterface _input;
+        private InputInterface? _input;
         public int UpdateOrder => 100;
-        private Mouth mouth;
-        private Eyes eyes;
+        private Mouth? mouth;
+        private Eyes? eyes;
         #endregion
 
         private bool? IsTracking
@@ -47,9 +47,9 @@ namespace WVFaceTracking
                     return;
                 this._isTracking = value;
                 if (value.Value)
-                    VDFaceTracking.Msg("[WiVRn] Tracking is now active!");
+                    WVFaceTracking.Msg("[WiVRn] Tracking is now active!");
                 else
-                    VDFaceTracking.Msg("[WiVRn] Tracking is not active. Make sure you are connected to your computer, a VR game or SteamVR is launched and 'Forward tracking data' is enabled in the Streaming tab.");
+                    WVFaceTracking.Msg("[WiVRn] Tracking is not active. Make sure you are connected to your computer, a VR game or SteamVR is launched and 'Forward tracking data' is enabled in the Streaming tab.");
             }
         }
 
@@ -143,7 +143,7 @@ namespace WVFaceTracking
                 _mappedView.SafeMemoryMappedViewHandle.AcquirePointer(ref numPtr);
                 this._faceState = (FaceState*) numPtr;
                 this._faceStateEvent = EventWaitHandle.OpenExisting(BodyStateEventName);
-                VDFaceTracking.Msg("[WiVRnWiVRn] Opened MemoryMappedFile. Everything should be working!");
+                WVFaceTracking.Msg("[WiVRnWiVRn] Opened MemoryMappedFile. Everything should be working!");
 
                 cancellationTokenSource = new CancellationTokenSource();
                 thread = new Thread(UpdateThread);
@@ -153,7 +153,7 @@ namespace WVFaceTracking
             }
             catch
             {
-                VDFaceTracking.Error("[WiVRn] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
+                WVFaceTracking.Error("[WiVRn] Failed to open MemoryMappedFile. Make sure the Virtual Desktop Streamer (v1.30 or later) is running.");
                 return false;
             }
         }
@@ -466,9 +466,9 @@ namespace WVFaceTracking
 
             if (eye.IsTracking)
             {
-                eye.UpdateWithRotation(MathX.Slerp(floatQ.Identity, data.rotation, VDFaceTracking.EyeMoveMult));
-                eye.Openness = MathX.Pow(MathX.FilterInvalid(data.open, 0.0f), VDFaceTracking.EyeOpenExponent);
-                eye.Widen = data.wide * VDFaceTracking.EyeWideMult;
+                eye.UpdateWithRotation(MathX.Slerp(floatQ.Identity, data.rotation, WVFaceTracking.EyeMoveMult));
+                eye.Openness = MathX.Pow(MathX.FilterInvalid(data.open, 0.0f), WVFaceTracking.EyeOpenExponent);
+                eye.Widen = data.wide * WVFaceTracking.EyeWideMult;
             }
         }
 
@@ -478,14 +478,14 @@ namespace WVFaceTracking
 
             eyes.LeftEye.IsTracking = _input.VR_Active;
 
-            var leftEyeData = VDFaceTracking.proxy.GetEyeData(FBEye.Left);
-            var rightEyeData = VDFaceTracking.proxy.GetEyeData(FBEye.Right);
+            var leftEyeData = WVFaceTracking.proxy.GetEyeData(FBEye.Left);
+            var rightEyeData = WVFaceTracking.proxy.GetEyeData(FBEye.Right);
 
             eyes.LeftEye.IsTracking = leftEyeData.isValid;
             eyes.LeftEye.RawPosition = leftEyeData.position;
             eyes.LeftEye.PupilDiameter = 0.004f;
             eyes.LeftEye.Squeeze = leftEyeData.squeeze;
-            eyes.LeftEye.Frown = expressions[FBExpression.Lip_Corner_Puller_L] - expressions[FBExpression.Lip_Corner_Depressor_L] * VDFaceTracking.EyeExpressionMult;
+            eyes.LeftEye.Frown = expressions[FBExpression.Lip_Corner_Puller_L] - expressions[FBExpression.Lip_Corner_Depressor_L] * WVFaceTracking.EyeExpressionMult;
             eyes.LeftEye.InnerBrowVertical = expressions[FBExpression.Inner_Brow_Raiser_L];
             eyes.LeftEye.OuterBrowVertical = expressions[FBExpression.Outer_Brow_Raiser_L];
             eyes.LeftEye.Squeeze = expressions[FBExpression.Brow_Lowerer_L];
@@ -496,7 +496,7 @@ namespace WVFaceTracking
             eyes.RightEye.RawPosition = rightEyeData.position;
             eyes.RightEye.PupilDiameter = 0.004f;
             eyes.RightEye.Squeeze = rightEyeData.squeeze;
-            eyes.RightEye.Frown = expressions[FBExpression.Lip_Corner_Puller_R] - expressions[FBExpression.Lip_Corner_Depressor_R] * VDFaceTracking.EyeExpressionMult;
+            eyes.RightEye.Frown = expressions[FBExpression.Lip_Corner_Puller_R] - expressions[FBExpression.Lip_Corner_Depressor_R] * WVFaceTracking.EyeExpressionMult;
             eyes.RightEye.InnerBrowVertical = expressions[FBExpression.Inner_Brow_Raiser_R];
             eyes.RightEye.OuterBrowVertical = expressions[FBExpression.Outer_Brow_Raiser_R];
             eyes.RightEye.Squeeze = expressions[FBExpression.Brow_Lowerer_R];
@@ -527,8 +527,8 @@ namespace WVFaceTracking
             eyes.CombinedEye.UpdateWithRotation(MathX.Slerp(eyes.LeftEye.RawRotation, eyes.RightEye.RawRotation, 0.5f));
             eyes.CombinedEye.PupilDiameter = 0.004f;
 
-            eyes.LeftEye.Openness = MathX.Pow(1.0f - Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedL] + expressions[(int)Expressions.EyesClosedL] * expressions[(int)Expressions.LidTightenerL])), VDFaceTracking.EyeOpenExponent);
-            eyes.RightEye.Openness = MathX.Pow(1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR] + expressions[(int)Expressions.EyesClosedR] * expressions[(int)Expressions.LidTightenerR])), VDFaceTracking.EyeOpenExponent);
+            eyes.LeftEye.Openness = MathX.Pow(1.0f - Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedL] + expressions[(int)Expressions.EyesClosedL] * expressions[(int)Expressions.LidTightenerL])), WVFaceTracking.EyeOpenExponent);
+            eyes.RightEye.Openness = MathX.Pow(1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR] + expressions[(int)Expressions.EyesClosedR] * expressions[(int)Expressions.LidTightenerR])), WVFaceTracking.EyeOpenExponent);
 
             eyes.ComputeCombinedEyeParameters();
             eyes.ConvergenceDistance = 0f;

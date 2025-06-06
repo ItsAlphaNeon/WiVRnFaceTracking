@@ -31,15 +31,15 @@ namespace WVFaceTracking
             "Multiplier to adjust the range of the user's eye expressions.  Can be updated at runtime.", () => 1.0f);
 
         
-        private static ModConfiguration _config;
+        private static ModConfiguration? _config;
 
-        public override string Name => "VDFaceTracking";
+        public override string Name => "WiVRnFaceTracking";
 
-        public override string Author => "Zeith & dfgHiatus & Geenz & Earthmark";
+        public override string Author => "AlphaNeon (Github/ItsAlphaNeon)";
 
-        public override string Version => "1.1.1";
+        public override string Version => "1.0.0";
 
-        public static VDProxy proxy;
+        public static WVProxy? proxy;
 
         public static float EyeOpenExponent = 1.0f;
         public static float EyeWideMult = 1.0f;
@@ -49,9 +49,10 @@ namespace WVFaceTracking
         public override void OnEngineInit()
         {
             _config = GetConfiguration();
-            _config.OnThisConfigurationChanged += OnConfigurationChanged;
+            if (_config != null)
+                _config.OnThisConfigurationChanged += OnConfigurationChanged;
 
-            new Harmony("org.zeith.VDFaceTracking").PatchAll();
+            new Harmony("org.alphaneon.WiVRnFaceTracking").PatchAll();
         }
 
         private void OnConfigurationChanged(ConfigurationChangedEvent @event)
@@ -95,7 +96,7 @@ namespace WVFaceTracking
         {
             public static void Postfix(InputInterface __instance)
             {
-                proxy = new VDProxy();
+                proxy = new WVProxy();
 
                 if (!proxy.Initialize()) return;
 
