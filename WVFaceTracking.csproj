@@ -2,8 +2,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{f6ad1524-11dd-4908-8aae-264488b65de6}</ProjectGuid>
-    <AssemblyTitle>EyeTrackVRResonite</AssemblyTitle>
-    <RootNamespace>EyeTrackVRResonite</RootNamespace>
+    <AssemblyTitle>WiVRnFaceTracking</AssemblyTitle>
+    <RootNamespace>WiVRnFaceTracking</RootNamespace>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -25,6 +25,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <Reference Include="FrooxEngine">
       <HintPath>$(ResonitePath)Resonite_Data\Managed\FrooxEngine.dll</HintPath>
     </Reference>
@@ -44,6 +45,8 @@
     </Reference>
     <Content Include="WVProxy.cs" />
     <Content Include="WVFaceTracking.cs" />
+    <Content Include="WiVRn\OscAvMgr\OscAvMgr.cs" />
+    <Content Include="WiVRn\OscAvMgr\oscavmgr_service_uninstall.sh" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(CopyToMods)'=='true'">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ResonitePath)rml_mods" />

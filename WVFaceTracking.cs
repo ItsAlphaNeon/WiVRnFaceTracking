@@ -3,6 +3,8 @@ using HarmonyLib;
 using ResoniteModLoader;
 using System;
 using System.Threading;
+using System.CodeDom;
+
 
 namespace WVFaceTracking
 {
@@ -30,7 +32,7 @@ namespace WVFaceTracking
           new("quest_pro_eye_expression_multiplier",
             "Multiplier to adjust the range of the user's eye expressions.  Can be updated at runtime.", () => 1.0f);
 
-        
+
         private static ModConfiguration? _config;
 
         public override string Name => "WiVRnFaceTracking";
@@ -46,6 +48,20 @@ namespace WVFaceTracking
         public static float EyeMoveMult = 1.0f;
         public static float EyeExpressionMult = 1.0f;
 
+        // Static logging method for other classes
+        public static void Log(string message)
+        {
+            WVFaceTracking.Msg($"[WiVRnFaceTracking] {message}");
+        }
+
+        // Singleton instance for static access
+        public static WVFaceTracking? Instance { get; private set; }
+
+        public WVFaceTracking()
+        {
+            Instance = this;
+        }
+
         public override void OnEngineInit()
         {
             _config = GetConfiguration();
@@ -53,6 +69,7 @@ namespace WVFaceTracking
                 _config.OnThisConfigurationChanged += OnConfigurationChanged;
 
             new Harmony("org.alphaneon.WiVRnFaceTracking").PatchAll();
+
         }
 
         private void OnConfigurationChanged(ConfigurationChangedEvent @event)

@@ -46,7 +46,7 @@ namespace WVFaceTracking
                 if (nullable.GetValueOrDefault() == isTracking.GetValueOrDefault() & nullable.HasValue == isTracking.HasValue)
                     return;
                 this._isTracking = value;
-                if (value.Value)
+                if (value == true)
                     WVFaceTracking.Msg("[WiVRn] Tracking is now active!");
                 else
                     WVFaceTracking.Msg("[WiVRn] Tracking is not active. Make sure you are connected to your computer, a VR game or SteamVR is launched and 'Forward tracking data' is enabled in the Streaming tab.");
@@ -55,7 +55,7 @@ namespace WVFaceTracking
 
         public virtual void UpdateThread()
         {
-            while (!cancellationTokenSource.IsCancellationRequested)
+            while (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
             {
                 try
                 {
@@ -69,7 +69,7 @@ namespace WVFaceTracking
 
         public virtual unsafe void Update()
         {
-            if (this._faceStateEvent.WaitOne(50))
+            if (this._faceStateEvent != null && this._faceStateEvent.WaitOne(50))
             {
                 this.UpdateTracking();
             }
