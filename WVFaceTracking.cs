@@ -84,6 +84,7 @@ namespace WVFaceTracking
         // Called when the engine initializes the mod
         public override void OnEngineInit()
         {
+            
             // Get the configuration and subscribe to changes
             _config = GetConfiguration();
             if (_config != null)
@@ -104,6 +105,7 @@ namespace WVFaceTracking
                 Log("OSCtoMMF instantiated and started in OnEngineInit");
             }
         }
+
 
         // Called when a configuration value changes
         private void OnConfigurationChanged(ConfigurationChangedEvent @event)

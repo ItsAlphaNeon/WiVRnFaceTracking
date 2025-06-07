@@ -140,48 +140,46 @@ namespace WVFaceTracking
             }
             this.IsTracking = new bool?(flag);
         }
-
         // Initializes the memory-mapped file and event for IPC, starts the update thread
         internal unsafe bool Initialize()
         {
             int size = Marshal.SizeOf<FaceState>();
-            int retries = 50; // 50 x 100ms = 5 seconds
             WiVRnLogger.Log($"[WiVRn][Init] Attempting to open MMF and event. Working directory: {Environment.CurrentDirectory}");
             WiVRnLogger.Log($"[WiVRn][Init] BodyStateMapName: '{BodyStateMapName}', BodyStateEventName: '{BodyStateEventName}'");
-            while (retries-- > 0)
+            int attempt = 1;
+            while (true)
             {
-                try
-                {
-                    WiVRnLogger.Log($"[WiVRn][Init] Attempt {50 - retries}: Opening MemoryMappedFile '{BodyStateMapName}'...");
-                    this._mappedFile = MemoryMappedFile.OpenExisting(BodyStateMapName, MemoryMappedFileRights.ReadWrite);
-                    WiVRnLogger.Log($"[WiVRn][Init] Opened MemoryMappedFile.");
-                    this._mappedView = this._mappedFile.CreateViewAccessor(0L, (long)size);
-                    WiVRnLogger.Log($"[WiVRn][Init] Created ViewAccessor.");
+            try
+            {
+                WiVRnLogger.Log($"[WiVRn][Init] Attempt {attempt}: Opening MemoryMappedFile '{BodyStateMapName}'...");
+                this._mappedFile = MemoryMappedFile.OpenExisting(BodyStateMapName, MemoryMappedFileRights.ReadWrite);
+                WiVRnLogger.Log($"[WiVRn][Init] Opened MemoryMappedFile.");
+                this._mappedView = this._mappedFile.CreateViewAccessor(0L, (long)size);
+                WiVRnLogger.Log($"[WiVRn][Init] Created ViewAccessor.");
 
-                    byte* numPtr = null;
-                    _mappedView.SafeMemoryMappedViewHandle.AcquirePointer(ref numPtr);
-                    this._faceState = (FaceState*) numPtr;
-                    WiVRnLogger.Log($"[WiVRn][Init] Acquired pointer to FaceState struct.");
+                byte* numPtr = null;
+                _mappedView.SafeMemoryMappedViewHandle.AcquirePointer(ref numPtr);
+                this._faceState = (FaceState*)numPtr;
+                WiVRnLogger.Log($"[WiVRn][Init] Acquired pointer to FaceState struct.");
 
-                    WiVRnLogger.Log($"[WiVRn][Init] Attempting to open EventWaitHandle '{BodyStateEventName}'...");
-                    this._faceStateEvent = EventWaitHandle.OpenExisting(BodyStateEventName);
-                    WiVRnLogger.Log("[WiVRnWiVRn] Opened MemoryMappedFile and EventWaitHandle. Everything should be working!");
+                WiVRnLogger.Log($"[WiVRn][Init] Attempting to open EventWaitHandle '{BodyStateEventName}'...");
+                this._faceStateEvent = EventWaitHandle.OpenExisting(BodyStateEventName);
+                WiVRnLogger.Log("[WiVRn] Opened MemoryMappedFile and EventWaitHandle. Everything should be working!");
 
-                    cancellationTokenSource = new CancellationTokenSource();
-                    thread = new Thread(UpdateThread);
-                    thread.Start();
+                cancellationTokenSource = new CancellationTokenSource();
+                thread = new Thread(UpdateThread);
+                thread.Start();
 
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    WiVRnLogger.Log($"[WiVRn][Init] Exception on attempt {50 - retries}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
-                    WiVRnLogger.Log($"[WiVRn] Waiting for MemoryMappedFile... ({ex.Message})");
-                    Thread.Sleep(100);
-                }
+                return true;
             }
-            WiVRnLogger.Log("[WiVRn] Failed to open MemoryMappedFile after waiting.");
-            return false;
+            catch (Exception ex)
+            {
+                WiVRnLogger.Log($"[WiVRn][Init] Exception on attempt {attempt}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                WiVRnLogger.Log($"[WiVRn] Waiting for MemoryMappedFile... ({ex.Message})");
+                attempt++;
+                Thread.Sleep(5000);
+            }
+            }
         }
 
         // Processes the expressions array to prepare values for Resonite's input system
@@ -571,8 +569,8 @@ namespace WVFaceTracking
             eyes.CombinedEye.PupilDiameter = 0.004f;
 
             // TODO: Investigate this Hack fix (expression index usage for Openness)
-            eyes.LeftEye.Openness = MathX.Pow(1.0f - Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedL] + expressions[(int)Expressions.EyesClosedL] * expressions[(int)Expressions.LidTightenerL])), WVFaceTracking.EyeOpenExponent);
-            eyes.RightEye.Openness = MathX.Pow(1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR] + expressions[(int)Expressions.EyesClosedR] * expressions[(int)Expressions.LidTightenerR])), WVFaceTracking.EyeOpenExponent);
+            eyes.LeftEye.Openness = MathX.Pow(Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedL] + expressions[(int)Expressions.EyesClosedL] * expressions[(int)Expressions.LidTightenerL])), WVFaceTracking.EyeOpenExponent);
+            eyes.RightEye.Openness = MathX.Pow((float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR] + expressions[(int)Expressions.EyesClosedR] * expressions[(int)Expressions.LidTightenerR])), WVFaceTracking.EyeOpenExponent);
 
             eyes.ComputeCombinedEyeParameters();
             eyes.ConvergenceDistance = 0f;

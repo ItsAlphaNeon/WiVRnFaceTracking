@@ -18,6 +18,7 @@ namespace WiVRn.Emulation
         private readonly object printLock = new();
         private readonly CancellationTokenSource cts = new();
         private readonly int listenPort = 9000;
+        private Thread? oscThread;
 
         static OSCReader()
         {
@@ -27,18 +28,23 @@ namespace WiVRn.Emulation
         public OSCReader()
         {
             WiVRnLogger.Log("OSCReader instance constructor: about to start tasks");
+            oscThread = new Thread(() => RunThread(cts.Token)) { IsBackground = true };
+            oscThread.Start();
+        }
+
+        private void RunThread(CancellationToken token)
+        {
             try
             {
-                Task.Run(() => ListenLoop(cts.Token)).ContinueWith(t => {
-                    if (t.Exception != null)
-                        WiVRnLogger.Log($"ListenLoop task failed: {t.Exception.Flatten().InnerException?.Message}");
-                }, TaskContinuationOptions.OnlyOnFaulted);
+                var listenTask = ListenLoop(token);
+                var printTask = PrintLoop(token);
+                Task.WaitAll(new[] { listenTask, printTask }, token);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                WiVRnLogger.Log($"Exception starting ListenLoop: {ex.Message}");
+                WiVRnLogger.Log($"OSCReader thread error: {ex.Message}");
             }
-            Task.Run(() => PrintLoop(cts.Token));
         }
 
         private async Task ListenLoop(CancellationToken token)

@@ -74,17 +74,27 @@ namespace WiVRn.Emulation
                     weights[(int)Expressions.LidTightenerL] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/EyeSquintLeft");
                     weights[(int)Expressions.LidTightenerR] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/EyeSquintRight");
                     weights[(int)Expressions.JawDrop] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/JawOpen");
-                    weights[(int)Expressions.JawSidewaysLeft] = -GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/JawX");
+                    weights[(int)Expressions.JawSidewaysLeft] = 1 - GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/JawX");
                     weights[(int)Expressions.JawSidewaysRight] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/JawX");
+                    // Both sides are LipFunnelLower and LipFunnelUpper
                     weights[(int)Expressions.LipFunnelerLb] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/LipFunnelLower");
                     weights[(int)Expressions.LipFunnelerLt] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/LipFunnelUpper");
+                    weights[(int)Expressions.LipFunnelerRb] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/LipFunnelLower");
+                    weights[(int)Expressions.LipFunnelerRt] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/LipFunnelUpper");
+
+                    // Both sides are LipPucker
                     weights[(int)Expressions.LipPuckerL] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/LipPucker");
+                    weights[(int)Expressions.LipPuckerR] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/LipPucker");
                     weights[(int)Expressions.MouthLeft] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthX");
                     weights[(int)Expressions.MouthRight] = -GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthX");
                     weights[(int)Expressions.LipStretcherL] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthStretchTightenLeft");
                     weights[(int)Expressions.LipStretcherR] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthStretchTightenRight");
+                    // Both sides are MouthUpperUp
                     weights[(int)Expressions.UpperLipRaiserL] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthUpperUp");
+                    weights[(int)Expressions.UpperLipRaiserR] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthUpperUp");
+                    // Both sides are MouthLowerDown
                     weights[(int)Expressions.LowerLipDepressorL] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthLowerDown");
+                    weights[(int)Expressions.LowerLipDepressorR] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/MouthLowerDown");
                     weights[(int)Expressions.LipCornerPullerL] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/SmileSadLeft");
                     weights[(int)Expressions.LipCornerPullerR] = GetOSCParameter(oscReader, "/avatar/parameters/FT/v2/SmileSadRight");
                 }
