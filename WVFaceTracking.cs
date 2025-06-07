@@ -4,6 +4,7 @@ using ResoniteModLoader;
 using System;
 using System.Threading;
 using System.CodeDom;
+using WiVRn.Emulation;
 
 
 namespace WVFaceTracking
@@ -59,10 +60,16 @@ namespace WVFaceTracking
         public static float EyeMoveMult = 1.0f;
         public static float EyeExpressionMult = 1.0f;
 
+        // OSC Reader instance for receiving OSC messages
+        public static OSCReader? oscReader;
+
+        // OSC to MMF bridge instance
+        public static OSCtoMMF? oscToMMF;
+
         // Static logging method for other classes to use
         public static void Log(string message)
         {
-            WVFaceTracking.Msg($"[WiVRnFaceTracking] {message}");
+            WiVRn.WiVRnLogger.Log($"[WiVRnFaceTracking] {message}");
         }
 
         // Singleton instance for static access to this mod class
@@ -84,6 +91,18 @@ namespace WVFaceTracking
 
             // Patch all Harmony patches in this assembly
             new Harmony("org.alphaneon.WiVRnFaceTracking").PatchAll();
+
+            // Initialize OSCReader here to ensure it stays alive and logging works
+            oscReader = new OSCReader();
+            Log("OSCReader initialized in OnEngineInit");
+
+            // Instantiate and start OSCtoMMF bridge
+            if (oscToMMF == null)
+            {
+                oscToMMF = new OSCtoMMF();
+                oscToMMF.Start(oscReader);
+                Log("OSCtoMMF instantiated and started in OnEngineInit");
+            }
         }
 
         // Called when a configuration value changes
