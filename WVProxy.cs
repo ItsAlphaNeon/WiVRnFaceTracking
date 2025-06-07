@@ -8,34 +8,48 @@ using WiVRn.FaceTracking;
 
 namespace WVFaceTracking
 {
+    // WVProxy implements IInputDriver to provide face/eye tracking data from a memory-mapped file.
     public class WVProxy : IInputDriver
     {
+        // Constants for memory-mapped file and event names
         private const string BodyStateMapName = "WiVRn.BodyState";
         private const string BodyStateEventName = "WiVRn.BodyStateEvent";
+
+        // Memory-mapped file and view for reading tracking data
         private MemoryMappedFile? _mappedFile;
         private MemoryMappedViewAccessor? _mappedView;
+        // Pointer to the FaceState struct in shared memory
         private unsafe FaceState* _faceState;
+        // Event for synchronization with the data provider
         private EventWaitHandle? _faceStateEvent;
 
+        // Used to cancel the update thread
         private CancellationTokenSource? cancellationTokenSource;
 
+        // Tracks if tracking is currently active
         private bool? _isTracking;
 
+        // Background thread for polling tracking data
         private Thread? thread;
 
+        // Number of blendshape expressions and normalization constant
         private const int NATURAL_EXPRESSIONS_COUNT = FBExpression.Max;
         private const float SRANIPAL_NORMALIZER = 0.75f;
+        // Array to store all expression values
         private float[] expressions = new float[NATURAL_EXPRESSIONS_COUNT + (8 * 2)];
 
-        private double pitch_L, yaw_L, pitch_R, yaw_R; // Eye rotations
+        // Eye rotation values (degrees)
+        private double pitch_L, yaw_L, pitch_R, yaw_R;
 
         #region RESONITE VARIABLES
+        // Input interface and output objects for Resonite integration
         private InputInterface? _input;
         public int UpdateOrder => 100;
         private Mouth? mouth;
         private Eyes? eyes;
         #endregion
 
+        // Property for tracking state, with message output on change
         private bool? IsTracking
         {
             get => this._isTracking;
@@ -43,6 +57,7 @@ namespace WVFaceTracking
             {
                 bool? nullable = value;
                 bool? isTracking = this._isTracking;
+                // Only update if value changes
                 if (nullable.GetValueOrDefault() == isTracking.GetValueOrDefault() & nullable.HasValue == isTracking.HasValue)
                     return;
                 this._isTracking = value;
@@ -53,6 +68,7 @@ namespace WVFaceTracking
             }
         }
 
+        // Main update loop for the background thread
         public virtual void UpdateThread()
         {
             while (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
@@ -63,10 +79,12 @@ namespace WVFaceTracking
                 }
                 catch
                 {
+                    // Swallow exceptions to keep thread alive
                 }
             }
         }
 
+        // Called by the update thread: waits for new data and updates tracking state
         public virtual unsafe void Update()
         {
             if (this._faceStateEvent != null && this._faceStateEvent.WaitOne(50))
@@ -75,11 +93,13 @@ namespace WVFaceTracking
             }
             else
             {
+                // If no new data, just update tracking state validity
                 FaceState* faceState = this._faceState;
                 this.IsTracking = new bool?((IntPtr)faceState != IntPtr.Zero && (faceState->LeftEyeIsValid || faceState->RightEyeIsValid || faceState->IsEyeFollowingBlendshapesValid || faceState->FaceIsValid));
             }
         }
 
+        // Reads the latest tracking data from shared memory and updates the expressions array
         private unsafe void UpdateTracking()
         {
             bool flag = false;
@@ -88,6 +108,7 @@ namespace WVFaceTracking
             {
                 float* expressionWeights = faceState->ExpressionWeights;
 
+                // Copy left eye pose if valid
                 if (faceState->LeftEyeIsValid)
                 {
                     Pose leftEyePose = faceState->LeftEyePose;
@@ -104,6 +125,7 @@ namespace WVFaceTracking
                     flag = true;
                 }
 
+                // Copy right eye pose if valid
                 if(faceState->RightEyeIsValid)
                 {
                     Pose rightEyePose = faceState->RightEyePose;
@@ -120,6 +142,7 @@ namespace WVFaceTracking
                     flag = true;
                 }
 
+                // Copy blendshape weights if valid
                 if (faceState->FaceIsValid && faceState->IsEyeFollowingBlendshapesValid)
                 {
                     for(int i = 0; i < NATURAL_EXPRESSIONS_COUNT; ++i)
@@ -131,6 +154,7 @@ namespace WVFaceTracking
             this.IsTracking = new bool?(flag);
         }
 
+        // Initializes the memory-mapped file and starts the update thread
         internal unsafe bool Initialize()
         {
             try
@@ -158,10 +182,10 @@ namespace WVFaceTracking
             }
         }
 
+        // Processes the expressions array to prepare for output (e.g., to Resonite)
         private void PrepareUpdate()
         {
-            // Eye Expressions
-
+            // Eye Expressions: Convert quaternion to Euler angles for both eyes
             double q_x = expressions[FBExpression.LeftRot_x];
             double q_y = expressions[FBExpression.LeftRot_y];
             double q_z = expressions[FBExpression.LeftRot_z];
@@ -296,6 +320,7 @@ namespace WVFaceTracking
             }
         }
 
+        // Cleans up resources and stops the update thread
         internal unsafe void Teardown()
         {
             cancellationTokenSource.Cancel();
@@ -327,13 +352,16 @@ namespace WVFaceTracking
             _isTracking = new bool?();
         }
 
+        // Utility: Checks if a float3 is valid (not NaN/Infinity)
         bool IsValid(float3 value) => IsValid(value.x) && IsValid(value.y) && IsValid(value.z);
+        // Utility: Checks if a quaternion is valid and in range
         bool IsValid(floatQ value) => IsValid(value.x) && IsValid(value.y) && IsValid(value.z) && IsValid(value.w) && InRange(value.x, new float2(1, -1)) && InRange(value.y, new float2(1, -1)) && InRange(value.z, new float2(1, -1)) && InRange(value.w, new float2(1, -1));
-
+        // Utility: Checks if a float is valid
         bool IsValid(float value) => !float.IsInfinity(value) && !float.IsNaN(value);
-
+        // Utility: Checks if a float is within a given range
         bool InRange(float value, float2 range) => (value <= range.x && value >= range.y);
 
+        // Struct for returning eye tracking data
         public struct EyeGazeData
         {
             public bool isValid;
@@ -345,12 +373,14 @@ namespace WVFaceTracking
             public float gazeConfidence;
         }
 
+        // Returns processed eye tracking data for the requested eye
         public EyeGazeData GetEyeData(FBEye fbEye)
         {
             EyeGazeData eyeRet = new EyeGazeData();
             switch (fbEye)
             {
                 case FBEye.Left:
+                    // Fill with left eye data from expressions array
                     eyeRet.position = new float3(expressions[FBExpression.LeftPos_x], -expressions[FBExpression.LeftPos_y], expressions[FBExpression.LeftPos_z]);
                     eyeRet.rotation = new floatQ(-expressions[FBExpression.LeftRot_x], -expressions[FBExpression.LeftRot_y], -expressions[FBExpression.LeftRot_z], expressions[FBExpression.LeftRot_w]);
                     eyeRet.open = MathX.Max(0, expressions[FBExpression.Eyes_Closed_L]);
@@ -359,6 +389,7 @@ namespace WVFaceTracking
                     eyeRet.isValid = IsValid(eyeRet.position);
                     return eyeRet;
                 case FBEye.Right:
+                    // Fill with right eye data from expressions array
                     eyeRet.position = new float3(expressions[FBExpression.RightPos_x], -expressions[FBExpression.RightPos_y], expressions[FBExpression.RightPos_z]);
                     eyeRet.rotation = new floatQ(-expressions[FBExpression.LeftRot_x], -expressions[FBExpression.LeftRot_y], -expressions[FBExpression.LeftRot_z], expressions[FBExpression.RightRot_w]);
                     eyeRet.open = MathX.Max(0, expressions[FBExpression.Eyes_Closed_R]);
@@ -371,6 +402,7 @@ namespace WVFaceTracking
             }
         }
 
+        // Fills a FrooxEngine Eye object with tracking data for the requested eye
         public void GetEyeExpressions(FBEye fbEye, Eye frooxEye)
         {
             frooxEye.PupilDiameter = 0.004f;
@@ -378,6 +410,7 @@ namespace WVFaceTracking
             switch (fbEye)
             {
                 case FBEye.Left:
+                    // Set left eye parameters
                     frooxEye.UpdateWithRotation(new floatQ(-expressions[FBExpression.LeftRot_x], -expressions[FBExpression.LeftRot_z], -expressions[FBExpression.LeftRot_y], expressions[FBExpression.LeftRot_w]));
                     frooxEye.RawPosition = new float3(expressions[FBExpression.LeftPos_x], expressions[FBExpression.LeftPos_y], expressions[FBExpression.LeftPos_z]);
                     frooxEye.Openness = MathX.Max(0, expressions[FBExpression.Eyes_Closed_L]);
@@ -386,6 +419,7 @@ namespace WVFaceTracking
                     frooxEye.Frown = expressions[FBExpression.Lip_Corner_Puller_L] - expressions[FBExpression.Lip_Corner_Depressor_L];
                     break;
                 case FBEye.Right:
+                    // Set right eye parameters
                     frooxEye.UpdateWithRotation(new floatQ(-expressions[FBExpression.RightRot_x], -expressions[FBExpression.RightRot_z], -expressions[FBExpression.RightRot_y], expressions[FBExpression.RightRot_w]));
                     frooxEye.RawPosition = new float3(expressions[FBExpression.RightPos_x], expressions[FBExpression.RightPos_y], expressions[FBExpression.RightPos_z]);
                     frooxEye.Openness = MathX.Max(0, expressions[FBExpression.Eyes_Closed_R]);
@@ -394,6 +428,7 @@ namespace WVFaceTracking
                     frooxEye.Frown = expressions[FBExpression.Lip_Corner_Puller_R] - expressions[FBExpression.Lip_Corner_Depressor_R];
                     break;
                 case FBEye.Combined:
+                    // Set combined eye parameters (average of both eyes)
                     frooxEye.UpdateWithRotation(MathX.Slerp(new floatQ(expressions[FBExpression.LeftRot_x], expressions[FBExpression.LeftRot_y], expressions[FBExpression.LeftRot_z], expressions[FBExpression.LeftRot_w]), new floatQ(expressions[FBExpression.RightRot_x], expressions[FBExpression.RightRot_y], expressions[FBExpression.RightRot_z], expressions[FBExpression.RightRot_w]), 0.5f));
                     frooxEye.RawPosition = MathX.Average(new float3(expressions[FBExpression.LeftPos_x], expressions[FBExpression.LeftPos_z], expressions[FBExpression.LeftPos_y]), new float3(expressions[FBExpression.RightPos_x], expressions[FBExpression.RightPos_z], expressions[FBExpression.RightPos_y]));
                     frooxEye.Openness = MathX.Max(0, expressions[FBExpression.Eyes_Closed_R] + expressions[FBExpression.Eyes_Closed_R]) / 2.0f;
@@ -403,11 +438,13 @@ namespace WVFaceTracking
                     break;
             }
 
+            // Validate and set tracking state
             frooxEye.IsTracking = IsValid(frooxEye.RawPosition);
             frooxEye.IsTracking = IsValid(frooxEye.Direction);
             frooxEye.IsTracking = IsValid(frooxEye.Openness);
         }
 
+        // Adds device info to a data tree for external use (e.g., UI)
         public void CollectDeviceInfos(DataTreeList list)
         {
             var eyeDataTreeDictionary = new DataTreeDictionary();
@@ -423,6 +460,7 @@ namespace WVFaceTracking
             list.Add(mouthDataTreeDictionary);
         }
 
+        // Registers input devices with the Resonite input system
         public void RegisterInputs(InputInterface inputInterface)
         {
             _input = inputInterface;
@@ -447,12 +485,14 @@ namespace WVFaceTracking
             });
         }
 
+        // Updates all input devices with the latest tracking data
         public void UpdateInputs(float deltaTime)
         {
             UpdateMouth(deltaTime);
             UpdateEyes(deltaTime);
         }
 
+        // Updates a single Eye object with new data
         void UpdateEye(Eye eye, EyeGazeData data)
         {
             bool _isValid = IsValid(data.open);
@@ -472,6 +512,7 @@ namespace WVFaceTracking
             }
         }
 
+        // Updates both eyes with the latest tracking data
         void UpdateEyes(float deltaTime)
         {
             eyes.IsEyeTrackingActive = _input.VR_Active;
@@ -503,6 +544,7 @@ namespace WVFaceTracking
 
             UpdateEye(eyes.RightEye, rightEyeData);
 
+            // Handle combined eye tracking state and parameters
             if (eyes.LeftEye.IsTracking || eyes.RightEye.IsTracking && (!eyes.LeftEye.IsTracking || !eyes.RightEye.IsTracking))
             {
                 if (eyes.LeftEye.IsTracking)
@@ -527,6 +569,7 @@ namespace WVFaceTracking
             eyes.CombinedEye.UpdateWithRotation(MathX.Slerp(eyes.LeftEye.RawRotation, eyes.RightEye.RawRotation, 0.5f));
             eyes.CombinedEye.PupilDiameter = 0.004f;
 
+            // Calculate openness for both eyes
             eyes.LeftEye.Openness = MathX.Pow(1.0f - Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedL] + expressions[(int)Expressions.EyesClosedL] * expressions[(int)Expressions.LidTightenerL])), WVFaceTracking.EyeOpenExponent);
             eyes.RightEye.Openness = MathX.Pow(1.0f - (float)Math.Max(0, Math.Min(1, expressions[(int)Expressions.EyesClosedR] + expressions[(int)Expressions.EyesClosedR] * expressions[(int)Expressions.LidTightenerR])), WVFaceTracking.EyeOpenExponent);
 
@@ -536,12 +579,13 @@ namespace WVFaceTracking
             eyes.FinishUpdate();
         }
 
+        // Updates the mouth tracking parameters with the latest data
         void UpdateMouth(float deltaTime)
         {
             mouth.IsDeviceActive = Engine.Current.InputInterface.VR_Active;
             mouth.IsTracking = Engine.Current.InputInterface.VR_Active;
 
-            // Pulled from Resonite:
+            // Pulled from Resonite: set all mouth blendshape parameters
             mouth.IsTracking = true;
             mouth.MouthLeftSmileFrown = expressions[FBExpression.Lip_Corner_Puller_L] - expressions[FBExpression.Lip_Corner_Depressor_L];
             mouth.MouthRightSmileFrown = expressions[FBExpression.Lip_Corner_Puller_R] - expressions[FBExpression.Lip_Corner_Depressor_R];
@@ -581,6 +625,7 @@ namespace WVFaceTracking
         }
     }
 
+    // Enum for selecting which eye to process
     public enum FBEye
     {
         Left,
