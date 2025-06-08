@@ -1,5 +1,7 @@
 # VDFaceTracking
 
+(This mod is incomplete, and is a work-in-progress.)
+
 This is a Resonite mod, which lets the game read facial expressions and eye gaze directly from WiVRn.
 
 This was patched together from [EyeTrackVRResonite](https://github.com/galister/EyeTrackVRResonite) and [VDFaceTracking](https://github.com/Zeitheron/VDFaceTracking).
