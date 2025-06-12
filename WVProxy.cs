@@ -338,7 +338,9 @@ namespace WVFaceTracking
         // Cleans up resources and stops the update thread
         internal unsafe void Teardown()
         {
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             cancellationTokenSource.Cancel();
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
             if (thread != null)
                 thread.Abort();
@@ -523,11 +525,17 @@ namespace WVFaceTracking
         // Updates both eyes and the combined eye with the latest tracking data
         void UpdateEyes(float deltaTime)
         {
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             eyes.IsEyeTrackingActive = _input.VR_Active;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
             eyes.LeftEye.IsTracking = _input.VR_Active;
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             var leftEyeData = WVFaceTracking.proxy.GetEyeData(FBEye.Left);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             var rightEyeData = WVFaceTracking.proxy.GetEyeData(FBEye.Right);
 
             eyes.LeftEye.IsTracking = leftEyeData.isValid;
@@ -590,7 +598,9 @@ namespace WVFaceTracking
         // Updates the mouth input device with the latest tracking data
         void UpdateMouth(float deltaTime)
         {
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             mouth.IsDeviceActive = Engine.Current.InputInterface.VR_Active;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             mouth.IsTracking = Engine.Current.InputInterface.VR_Active;
 
             // Pulled from Resonite:

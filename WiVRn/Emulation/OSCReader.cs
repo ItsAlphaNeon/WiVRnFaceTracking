@@ -37,8 +37,8 @@ namespace WiVRn.Emulation
             try
             {
                 var listenTask = ListenLoop(token);
-                var printTask = PrintLoop(token);
-                Task.WaitAll(new[] { listenTask, printTask }, token);
+                // var printTask = PrintLoop(token);
+                // Task.WaitAll(new[] { listenTask, printTask }, token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -100,14 +100,14 @@ namespace WiVRn.Emulation
             oscAddressValues[message.Address] = sb.ToString().Trim();
         }
 
-        private async Task PrintLoop(CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                PrintOscAddresses();
-                await Task.Delay(1000, token);
-            }
-        }
+        // private async Task PrintLoop(CancellationToken token)
+        // {
+        //     while (!token.IsCancellationRequested)
+        //     {
+        //         PrintOscAddresses();
+        //         await Task.Delay(1000, token);
+        //     }
+        // }
 
         private void PrintOscAddresses()
         {

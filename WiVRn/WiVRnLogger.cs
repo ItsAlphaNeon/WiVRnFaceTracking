@@ -38,6 +38,7 @@ namespace WiVRn
             catch (Exception ex)
             {
                 // If logging fails, there's not much we can do. Optionally, swallow or rethrow.
+                Console.WriteLine($"[WiVRnLogger] Failed to write log: {ex.Message}");
             }
         }
     }
