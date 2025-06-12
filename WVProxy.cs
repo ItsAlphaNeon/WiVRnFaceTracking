@@ -143,42 +143,51 @@ namespace WVFaceTracking
         // Initializes the memory-mapped file and event for IPC, starts the update thread
         internal unsafe bool Initialize()
         {
+            // Start a background thread to attempt MMF connection
+            Thread mmfInitThread = new Thread(() => TryConnectMMFInBackground());
+            mmfInitThread.IsBackground = true;
+            mmfInitThread.Start();
+            WiVRnLogger.Log("[WiVRn][Init] Started MMF connection thread. Will not block main thread.");
+            return true; // Always return immediately, never block
+        }
+
+        // Background MMF connection logic
+        private unsafe void TryConnectMMFInBackground()
+        {
             int size = Marshal.SizeOf<FaceState>();
-            WiVRnLogger.Log($"[WiVRn][Init] Attempting to open MMF and event. Working directory: {Environment.CurrentDirectory}");
-            WiVRnLogger.Log($"[WiVRn][Init] BodyStateMapName: '{BodyStateMapName}', BodyStateEventName: '{BodyStateEventName}'");
             int attempt = 1;
             while (true)
             {
-            try
-            {
-                WiVRnLogger.Log($"[WiVRn][Init] Attempt {attempt}: Opening MemoryMappedFile '{BodyStateMapName}'...");
-                this._mappedFile = MemoryMappedFile.OpenExisting(BodyStateMapName, MemoryMappedFileRights.ReadWrite);
-                WiVRnLogger.Log($"[WiVRn][Init] Opened MemoryMappedFile.");
-                this._mappedView = this._mappedFile.CreateViewAccessor(0L, (long)size);
-                WiVRnLogger.Log($"[WiVRn][Init] Created ViewAccessor.");
+                try
+                {
+                    WiVRnLogger.Log($"[WiVRn][Init] Attempt {attempt}: Opening MemoryMappedFile '{BodyStateMapName}'...");
+                    this._mappedFile = MemoryMappedFile.OpenExisting(BodyStateMapName, MemoryMappedFileRights.ReadWrite);
+                    WiVRnLogger.Log($"[WiVRn][Init] Opened MemoryMappedFile.");
+                    this._mappedView = this._mappedFile.CreateViewAccessor(0L, (long)size);
+                    WiVRnLogger.Log($"[WiVRn][Init] Created ViewAccessor.");
 
-                byte* numPtr = null;
-                _mappedView.SafeMemoryMappedViewHandle.AcquirePointer(ref numPtr);
-                this._faceState = (FaceState*)numPtr;
-                WiVRnLogger.Log($"[WiVRn][Init] Acquired pointer to FaceState struct.");
+                    byte* numPtr = null;
+                    _mappedView.SafeMemoryMappedViewHandle.AcquirePointer(ref numPtr);
+                    this._faceState = (FaceState*)numPtr;
+                    WiVRnLogger.Log($"[WiVRn][Init] Acquired pointer to FaceState struct.");
 
-                WiVRnLogger.Log($"[WiVRn][Init] Attempting to open EventWaitHandle '{BodyStateEventName}'...");
-                this._faceStateEvent = EventWaitHandle.OpenExisting(BodyStateEventName);
-                WiVRnLogger.Log("[WiVRn] Opened MemoryMappedFile and EventWaitHandle. Everything should be working!");
+                    WiVRnLogger.Log($"[WiVRn][Init] Attempting to open EventWaitHandle '{BodyStateEventName}'...");
+                    this._faceStateEvent = EventWaitHandle.OpenExisting(BodyStateEventName);
+                    WiVRnLogger.Log("[WiVRn] Opened MemoryMappedFile and EventWaitHandle. Everything should be working!");
 
-                cancellationTokenSource = new CancellationTokenSource();
-                thread = new Thread(UpdateThread);
-                thread.Start();
+                    cancellationTokenSource = new CancellationTokenSource();
+                    thread = new Thread(UpdateThread);
+                    thread.Start();
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                WiVRnLogger.Log($"[WiVRn][Init] Exception on attempt {attempt}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
-                WiVRnLogger.Log($"[WiVRn] Waiting for MemoryMappedFile... ({ex.Message})");
-                attempt++;
-                Thread.Sleep(5000);
-            }
+                    break; // Successfully connected, exit loop
+                }
+                catch (Exception ex)
+                {
+                    WiVRnLogger.Log($"[WiVRn][Init] Exception on attempt {attempt}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                    WiVRnLogger.Log($"[WiVRn] Waiting for MemoryMappedFile... ({ex.Message})");
+                    attempt++;
+                    Thread.Sleep(5000); // Wait before retrying, but never block main thread
+                }
             }
         }
 
